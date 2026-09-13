@@ -8,13 +8,56 @@ const multer = require('multer');
 const Book = require('../models/Books');
 const Page = require('../models/Page');
 const Highlight = require('../models/Highlight');
-
+const { GoogleGenAI } = require('@google/genai');
 // Ensure uploads directory exists
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
+// Configure Multer to keep the image in memory, not save to disk
+const uploadMemory = multer({ storage: multer.memoryStorage() });
+
+// Initialize Gemini
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+// POST /api/books/scan-page
+router.post('/scan-page', uploadMemory.single('pageImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image provided' });
+    }
+
+    // Convert the image buffer to base64
+    const base64Image = req.file.buffer.toString('base64');
+    const mimeType = req.file.mimetype; // e.g., 'image/jpeg'
+
+    const prompt = `
+      You are an expert OCR system. Read this book page and extract all the text.
+      Return the text as clean, semantic HTML. 
+      You MUST preserve paragraphs, line breaks, italics, bolding, and alignment. 
+      Do NOT include markdown formatting like \`\`\`html, just return the raw HTML string.
+    `;
+
+    // Call the Gemini API
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: [
+        { text: prompt },
+        { inlineData: { data: base64Image, mimeType: mimeType } }
+      ]
+    });
+
+    const htmlContent = response.text;
+
+    // Return the perfectly formatted HTML to the frontend!
+    res.status(200).json({ content: htmlContent });
+
+  } catch (error) {
+    console.error('Gemini API Error:', error);
+    res.status(500).json({ error: 'Failed to scan image' });
+  }
+});
 // Storage configuration for Multer
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
