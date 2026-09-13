@@ -22,7 +22,9 @@ app.use('/api/highlights', highlightRoutes);
 mongoose.connect(process.env.MONGO_URI)
     .then(() => {
         console.log('✅ Connected to MongoDB successfully');
-
+        app.listen(PORT, '0.0.0.0', () => {
+            console.log(`🚀 Server running on port ${PORT}`);
+        });
     })
     .catch((error) => {
         console.error('❌ MongoDB connection error:', error);
