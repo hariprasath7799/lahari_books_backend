@@ -33,11 +33,32 @@ router.post('/scan-page', uploadMemory.single('pageImage'), async (req, res) => 
     const mimeType = req.file.mimetype; // e.g., 'image/jpeg'
 
     const prompt = `
-      You are an expert OCR system. Read this book page and extract all the text.
-      Return the text as clean, semantic HTML. 
-      You MUST preserve paragraphs, line breaks, italics, bolding, and alignment. 
-      Do NOT include markdown formatting like \`\`\`html, just return the raw HTML string.
-    `;
+You are an expert multilingual OCR system specializing in Indian language book digitizing (Tamil, Telugu, Hindi, Malayalam, Kannada, Bengali, Marathi, Gujarati, English, etc.).
+
+Analyze this book page image and transcribe all text into clean, semantic HTML following these strict guidelines:
+
+1. TEXT ACCURACY & INDIC SCRIPT NORMALIZATION:
+   - Extract all native script text accurately with standard NFC Unicode encoding.
+   - Join hyphenated or line-split words naturally across line breaks (e.g. convert "கொடுத்-\nதுவிட்டான்" to "கொடுத்துவிட்டான்").
+
+2. PUNCTUATION & SENTENCE BOUNDARIES (CRITICAL FOR AUDIO READERS):
+   - Preserve all original punctuation.
+   - Ensure every paragraph (<p>) and heading (<h2>, <h3>) ends with clear sentence punctuation (e.g., '.', '!', '?', or '|'). 
+
+3. SEMANTIC HTML STRUCTURE:
+   - Wrap normal text paragraphs in simple <p>...</p> tags.
+   - Wrap section/chapter titles in <h2> or <h3> tags.
+   - Preserve text formatting using only <strong> for bold and <em> for italics.
+   - Preserve text alignment using simple inline styles where relevant (e.g., <h3 style="text-align: center;"> or <p style="text-align: center;">).
+   - Do NOT use unnecessary <span>, <div>, or complex style attributes.
+   - Ensure a newline character (\n) exists between adjacent HTML block tags.
+
+4. OUTPUT FORMAT:
+   - Return ONLY the raw valid HTML content.
+   - Do NOT include markdown code blocks like \`\`\`html or \`\`\`.
+   - Do NOT include any introductory or concluding text.
+`.trim();
+
 
     // Call the Gemini API
     const response = await ai.models.generateContent({
